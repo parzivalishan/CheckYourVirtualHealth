@@ -77,7 +77,7 @@
 
             socket.onmessage = function (event) {
                 const data = JSON.parse(event.data);
-                const price = parseFloat(data.c).toFixed(2);
+                const price = parseFloat(data.c);
                 prices[symbol] = price;
                 updatePriceDisplay();
             };
@@ -102,7 +102,7 @@
                 })
                 .then(data => {
                     if (data.price) {
-                        const price = parseFloat(data.price).toFixed(2);
+                        const price = parseFloat(data.price);
                         prices[symbol] = price;
                     } else {
                         prices[symbol] = 'N/A';
