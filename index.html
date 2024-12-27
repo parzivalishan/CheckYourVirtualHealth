@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='black'>I</text></svg>">
     <style>
         body {
-            background-color: #0F1112; /* SpaceX Chinese Black */
-            color: #FFFFFF; /* White text for contrast */
+            background-color: #0F1112;
+            color: #FFFFFF;
             font-family: Arial, sans-serif;
             text-align: center;
             margin-top: 50px;
@@ -17,11 +19,11 @@
             border: none;
             border-radius: 5px;
             margin-right: 10px;
-            display: none; /* Hidden by default */
+            display: none;
         }
         button {
             padding: 10px 15px;
-            background-color: #005288; /* SpaceX Blue */
+            background-color: #005288;
             color: #FFFFFF;
             border: none;
             border-radius: 5px;
@@ -29,7 +31,7 @@
             transition: background-color 0.3s ease;
         }
         button:hover {
-            background-color: #003d5b; /* Darker blue on hover */
+            background-color: #003d5b;
         }
         .arrow-button {
             font-size: 20px;
@@ -71,6 +73,11 @@
             return null;
         }
 
+        function updateTabTitle() {
+            const priceList = symbolsOrder.map(symbol => prices[symbol] || 'N/A').join(' , ');
+            document.title = priceList || 'I';
+        }
+
         function fetchSpotPrice(symbol) {
             const formattedSymbol = symbol.toUpperCase() + 'USDT';
             const socket = new WebSocket(`wss://stream.binance.com:9443/ws/${formattedSymbol.toLowerCase()}@ticker`);
@@ -80,12 +87,14 @@
                 const price = parseFloat(data.c);
                 prices[symbol] = price;
                 updatePriceDisplay();
+                updateTabTitle();
             };
 
             socket.onerror = function (error) {
                 console.error('WebSocket error:', error);
                 prices[symbol] = 'Error';
                 updatePriceDisplay();
+                updateTabTitle();
             };
 
             sockets.push(socket);
@@ -108,11 +117,13 @@
                         prices[symbol] = 'N/A';
                     }
                     updatePriceDisplay();
+                    updateTabTitle();
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
                     prices[symbol] = 'Error';
                     updatePriceDisplay();
+                    updateTabTitle();
                 });
         }
 
@@ -146,7 +157,6 @@
             prices = {};
             symbolsOrder = symbols;
 
-            // Hide input values by replacing them with asterisks
             inputField.value = '*'.repeat(input.length);
 
             symbols.forEach(symbol => {
@@ -175,6 +185,7 @@
                 symbolsOrder = [];
                 Object.values(futurePriceIntervals).forEach(clearInterval);
                 futurePriceIntervals = {};
+                document.title = 'I';
             }
         });
 
@@ -184,7 +195,7 @@
                 const inputBox = document.getElementById('coin-input');
                 inputBox.style.display = 'inline-block';
                 inputBox.value = lastInput;
-                handleFetch(); // Automatically fetch prices on page load
+                handleFetch();
             }
         };
     </script>
