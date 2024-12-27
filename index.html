@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>I</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' fill='black'>I</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='black'/></svg>" type="image/svg+xml"> <!-- Filled black logo -->
     <style>
         body {
-            background-color: #0F1112;
-            color: #FFFFFF;
+            background-color: #0F1112; /* SpaceX Chinese Black */
+            color: #FFFFFF; /* White text for contrast */
             font-family: Arial, sans-serif;
             text-align: center;
             margin-top: 50px;
+            position: relative;
         }
         input[type="text"] {
             padding: 10px;
@@ -19,11 +20,11 @@
             border: none;
             border-radius: 5px;
             margin-right: 10px;
-            display: none;
+            display: none; /* Hidden by default */
         }
         button {
             padding: 10px 15px;
-            background-color: #005288;
+            background-color: #005288; /* SpaceX Blue */
             color: #FFFFFF;
             border: none;
             border-radius: 5px;
@@ -31,7 +32,7 @@
             transition: background-color 0.3s ease;
         }
         button:hover {
-            background-color: #003d5b;
+            background-color: #003d5b; /* Darker blue on hover */
         }
         .arrow-button {
             font-size: 20px;
@@ -42,19 +43,129 @@
             font-size: 2em;
             margin-top: 20px;
         }
+        .bookmark {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+        }
+        .alert-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            width: 300px;
+        }
+        .alert-modal h3 {
+            margin-top: 0;
+            color: #ffffff;
+            font-size: 1.5em;
+        }
+        .alert-modal label {
+            display: block;
+            margin: 10px 0 5px;
+            color: #ffffff;
+            font-size: 1em;
+        }
+        .alert-modal input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-size: 1em;
+        }
+        .alert-modal input:focus {
+            border-color: #005288;
+            outline: none;
+        }
+        .alert-modal button {
+            width: 100%;
+            padding: 10px;
+            background-color: #005288;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+        .alert-modal button:hover {
+            background-color: #003d5b;
+        }
+        .alert-modal .close-btn {
+            background-color: #444;
+            margin-top: 10px;
+        }
+        .alert-modal .close-btn:hover {
+            background-color: #333;
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #005288;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+        /* Hide up/down arrows in number input */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield; /* Firefox */
+        }
     </style>
 </head>
 <body>
+    <div class="bookmark" onclick="openAlertModal()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 21L12 16L5 21V5C5 3.89543 5.89543 3 7 3H17C18.1046 3 19 3.89543 19 5V21Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </div>
     <button id="toggle-input" class="arrow-button">➡️</button>
     <input type="text" id="coin-input" autocomplete="off" placeholder="" />
     <button id="fetch-price" class="arrow-button">⬇️</button>
     <div class="price" id="coin-price"></div>
+
+    <div id="alert-modal" class="alert-modal">
+        <h3></h3>
+        <div id="alert-inputs"></div>
+        <button onclick="saveAlerts()">Save</button>
+        <button class="close-btn" onclick="closeAlertModal()">Close</button>
+    </div>
+
+    <div id="notification" class="notification"></div>
 
     <script>
         let sockets = [];
         let prices = {};
         let symbolsOrder = [];
         let futurePriceIntervals = {};
+        let alerts = {};
 
         function setCookie(name, value, days) {
             const date = new Date();
@@ -73,21 +184,17 @@
             return null;
         }
 
-        function updateTabTitle() {
-            const priceList = symbolsOrder.map(symbol => prices[symbol] || 'N/A').join(' , ');
-            document.title = priceList || 'I';
-        }
-
         function fetchSpotPrice(symbol) {
             const formattedSymbol = symbol.toUpperCase() + 'USDT';
             const socket = new WebSocket(`wss://stream.binance.com:9443/ws/${formattedSymbol.toLowerCase()}@ticker`);
 
             socket.onmessage = function (event) {
                 const data = JSON.parse(event.data);
-                const price = parseFloat(data.c);
+                const price = parseFloat(data.c); // Current price
                 prices[symbol] = price;
                 updatePriceDisplay();
                 updateTabTitle();
+                checkAlerts(symbol, price);
             };
 
             socket.onerror = function (error) {
@@ -118,6 +225,7 @@
                     }
                     updatePriceDisplay();
                     updateTabTitle();
+                    checkAlerts(symbol, prices[symbol]);
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
@@ -139,9 +247,69 @@
 
         function updatePriceDisplay() {
             const priceDisplay = symbolsOrder
-                .map(symbol => `${prices[symbol] || 'N/A'}`)
+                .map(symbol => `${prices[symbol] || 'N/A'}`) // Only show the price
                 .join('<br>');
             document.getElementById('coin-price').innerHTML = priceDisplay;
+        }
+
+        function updateTabTitle() {
+            const title = symbolsOrder
+                .map(symbol => `${prices[symbol] || 'N/A'}`)
+                .join(' | ');
+            document.title = title || 'I'; // Default to "I" if no prices are available
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000); // Hide after 5 seconds
+        }
+
+        function checkAlerts(symbol, price) {
+            if (alerts[symbol] && price !== 'N/A' && price !== 'Error' && price >= alerts[symbol]) {
+                showNotification(`Alert: ${symbol} reached ${alerts[symbol]}`);
+                delete alerts[symbol]; // Remove the alert after triggering
+            }
+        }
+
+        function openAlertModal() {
+            const modal = document.getElementById('alert-modal');
+            const alertInputs = document.getElementById('alert-inputs');
+            alertInputs.innerHTML = symbolsOrder
+                .map((symbol, index) => `
+                    <div>
+                        <label>${getOrdinalNumber(index + 1)} :</label>
+                        <input type="number" id="alert-${symbol}" placeholder="" value="${alerts[symbol] || ''}" class="alert-input">
+                    </div>
+                `)
+                .join('');
+            modal.style.display = 'block';
+        }
+
+        function closeAlertModal() {
+            const modal = document.getElementById('alert-modal');
+            modal.style.display = 'none';
+        }
+
+        function saveAlerts() {
+            symbolsOrder.forEach(symbol => {
+                const alertInput = document.getElementById(`alert-${symbol}`);
+                if (alertInput.value) {
+                    alerts[symbol] = parseFloat(alertInput.value);
+                } else {
+                    delete alerts[symbol];
+                }
+            });
+            closeAlertModal();
+        }
+
+        function getOrdinalNumber(n) {
+            const suffixes = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return n + (suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]);
         }
 
         function handleFetch() {
@@ -157,6 +325,7 @@
             prices = {};
             symbolsOrder = symbols;
 
+            // Hide input values by replacing them with asterisks
             inputField.value = '*'.repeat(input.length);
 
             symbols.forEach(symbol => {
@@ -168,6 +337,14 @@
                 }
             });
         }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', (event) => {
+            const modal = document.getElementById('alert-modal');
+            if (modal.style.display === 'block' && !modal.contains(event.target) && !document.querySelector('.bookmark').contains(event.target)) {
+                closeAlertModal();
+            }
+        });
 
         document.getElementById('fetch-price').addEventListener('click', handleFetch);
 
@@ -185,7 +362,7 @@
                 symbolsOrder = [];
                 Object.values(futurePriceIntervals).forEach(clearInterval);
                 futurePriceIntervals = {};
-                document.title = 'I';
+                document.title = 'I'; // Reset tab title to default
             }
         });
 
@@ -195,7 +372,7 @@
                 const inputBox = document.getElementById('coin-input');
                 inputBox.style.display = 'inline-block';
                 inputBox.value = lastInput;
-                handleFetch();
+                handleFetch(); // Automatically fetch prices on page load
             }
         };
     </script>
